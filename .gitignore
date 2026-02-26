@@ -43,3 +43,4 @@ public/assets/stockfish/stockfish.wasm
 # System files
 .DS_Store
 Thumbs.db
+.vercel

@@ -1,6 +1,7 @@
-import { Component, signal, OnInit } from '@angular/core';
+import { Component, signal, OnInit, ViewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ChessboardComponent } from '../../components/chessboard/chessboard.component';
+import { CelebrationComponent } from '../../components/celebration/celebration.component';
 import { LessonService } from '../../services/lesson.service';
 import { SoundService } from '../../services/sound.service';
 import { Lesson, LessonStep } from '../../models/lesson.model';
@@ -8,15 +9,21 @@ import { Lesson, LessonStep } from '../../models/lesson.model';
 @Component({
   selector: 'app-lesson',
   standalone: true,
-  imports: [ChessboardComponent],
+  imports: [ChessboardComponent, CelebrationComponent],
   template: `
+    <app-celebration #celebration />
+
     @if (lesson()) {
       <div class="lesson-page">
-        <div class="lesson-header">
+        <div class="lesson-header glass-panel">
           <button class="back-btn" (click)="goBack()">← Back</button>
-          <h1>{{ lesson()!.title }}</h1>
-          <div class="step-indicator">
-            Step {{ currentStepIndex() + 1 }} of {{ lesson()!.steps.length }}
+          <div class="lesson-title-area">
+            <h1>{{ lesson()!.title }}</h1>
+            <div class="step-indicator">
+              <span class="step-current">{{ currentStepIndex() + 1 }}</span>
+              <span class="step-sep">/</span>
+              <span class="step-total">{{ lesson()!.steps.length }}</span>
+            </div>
           </div>
         </div>
 
@@ -32,29 +39,40 @@ import { Lesson, LessonStep } from '../../models/lesson.model';
           </div>
 
           <div class="text-section">
-            <div class="step-text">
+            <!-- Step type badge -->
+            <div class="step-type-badge" [class]="currentStep()!.type">
+              @switch (currentStep()!.type) {
+                @case ('explain') { 📖 Explanation }
+                @case ('highlight') { 🔍 Observe }
+                @case ('make-move') { 🎯 Your Turn }
+                @case ('auto-play') { ▶ Watch }
+              }
+            </div>
+
+            <div class="step-text glass-panel">
               <p>{{ currentStep()!.text }}</p>
             </div>
 
             @if (currentStep()!.type === 'make-move') {
               <div class="instruction-badge" [class.correct]="moveCorrect()" [class.wrong]="moveWrong()">
                 @if (moveCorrect()) {
-                  Correct! Well done.
+                  <span class="badge-icon">✅</span> Correct! Well done.
                 } @else if (moveWrong()) {
-                  Not quite. Try again!
+                  <span class="badge-icon">❌</span> Not quite. Try again!
                 } @else {
-                  Your turn - make the correct move on the board.
+                  <span class="badge-icon">🎯</span> Make the correct move on the board.
                 }
               </div>
             }
 
-            <div class="progress-bar-container">
+            <div class="progress-section">
               <div class="progress-bar-bg">
                 <div
                   class="progress-bar-fill"
                   [style.width.%]="((currentStepIndex() + 1) / lesson()!.steps.length) * 100"
                 ></div>
               </div>
+              <span class="progress-label">{{ Math.round(((currentStepIndex() + 1) / lesson()!.steps.length) * 100) }}%</span>
             </div>
 
             <div class="nav-buttons">
@@ -89,7 +107,7 @@ import { Lesson, LessonStep } from '../../models/lesson.model';
   `,
   styles: [`
     .lesson-page {
-      max-width: 1000px;
+      max-width: 1050px;
       margin: 0 auto;
       padding: 20px;
     }
@@ -97,28 +115,53 @@ import { Lesson, LessonStep } from '../../models/lesson.model';
       display: flex;
       align-items: center;
       gap: 16px;
+      padding: 14px 20px;
       margin-bottom: 24px;
+      border-color: rgba(0, 212, 255, 0.12);
     }
     .back-btn {
-      padding: 6px 12px;
-      border: 1px solid #e0e0e0;
-      border-radius: 6px;
-      background: #fff;
+      padding: 8px 14px;
+      border: 1px solid var(--border-glass);
+      border-radius: var(--radius-sm);
+      background: var(--bg-glass);
       cursor: pointer;
       font-size: 13px;
-      color: #666;
+      font-weight: 600;
+      color: var(--text-secondary);
+      transition: all var(--transition-fast);
     }
-    .back-btn:hover { background: #f5f5f5; }
-    .lesson-header h1 {
+    .back-btn:hover {
+      background: var(--bg-glass-hover);
+      border-color: var(--neon-blue);
+      color: var(--neon-blue);
+    }
+    .lesson-title-area {
       flex: 1;
-      font-size: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .lesson-header h1 {
+      font-size: 22px;
+      font-weight: 700;
       margin: 0;
-      color: #1a1a1a;
+      color: var(--text-primary);
     }
     .step-indicator {
+      font-family: var(--font-mono);
       font-size: 14px;
-      color: #999;
+      display: flex;
+      align-items: baseline;
+      gap: 2px;
     }
+    .step-current {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--neon-blue);
+    }
+    .step-sep { color: var(--text-muted); }
+    .step-total { color: var(--text-muted); }
+
     .lesson-content {
       display: flex;
       gap: 24px;
@@ -129,73 +172,144 @@ import { Lesson, LessonStep } from '../../models/lesson.model';
     .text-section {
       flex: 1;
       min-width: 280px;
-      max-width: 400px;
+      max-width: 420px;
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 14px;
     }
+
+    .step-type-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: var(--radius-pill);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      width: fit-content;
+    }
+    .step-type-badge.explain {
+      background: rgba(0, 212, 255, 0.1);
+      color: var(--neon-blue);
+      border: 1px solid rgba(0, 212, 255, 0.2);
+    }
+    .step-type-badge.highlight {
+      background: rgba(191, 90, 242, 0.1);
+      color: var(--neon-purple);
+      border: 1px solid rgba(191, 90, 242, 0.2);
+    }
+    .step-type-badge.make-move {
+      background: rgba(57, 255, 20, 0.1);
+      color: var(--neon-green);
+      border: 1px solid rgba(57, 255, 20, 0.2);
+    }
+    .step-type-badge.auto-play {
+      background: rgba(255, 215, 0, 0.1);
+      color: var(--neon-gold);
+      border: 1px solid rgba(255, 215, 0, 0.2);
+    }
+
     .step-text {
-      background: #f5f5f5;
-      border-radius: 10px;
       padding: 20px;
     }
     .step-text p {
       margin: 0;
       font-size: 15px;
-      line-height: 1.6;
-      color: #333;
+      line-height: 1.7;
+      color: var(--text-primary);
     }
     .instruction-badge {
-      padding: 12px 16px;
-      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 18px;
+      border-radius: var(--radius-md);
       font-size: 14px;
-      text-align: center;
-      background: #e3f2fd;
-      color: #1976d2;
+      font-weight: 600;
+      background: rgba(0, 212, 255, 0.1);
+      color: var(--neon-blue);
+      border: 1px solid rgba(0, 212, 255, 0.2);
     }
-    .instruction-badge.correct { background: #e8f5e9; color: #2e7d32; }
-    .instruction-badge.wrong { background: #fce4ec; color: #c62828; }
-    .progress-bar-container { padding: 0 4px; }
+    .instruction-badge.correct {
+      background: rgba(57, 255, 20, 0.1);
+      color: var(--neon-green);
+      border-color: rgba(57, 255, 20, 0.2);
+      box-shadow: 0 0 15px rgba(57, 255, 20, 0.1);
+    }
+    .instruction-badge.wrong {
+      background: rgba(255, 45, 120, 0.1);
+      color: var(--neon-pink);
+      border-color: rgba(255, 45, 120, 0.2);
+      box-shadow: 0 0 15px rgba(255, 45, 120, 0.1);
+    }
+    .badge-icon { font-size: 18px; }
+
+    .progress-section {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
     .progress-bar-bg {
-      height: 4px;
-      background: #e0e0e0;
-      border-radius: 2px;
+      flex: 1;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 3px;
       overflow: hidden;
     }
     .progress-bar-fill {
       height: 100%;
-      background: #1976d2;
-      border-radius: 2px;
-      transition: width 0.3s;
+      background: linear-gradient(90deg, var(--neon-blue), var(--neon-purple));
+      border-radius: 3px;
+      transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 0 8px rgba(0, 212, 255, 0.4);
     }
+    .progress-label {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 600;
+      min-width: 36px;
+      text-align: right;
+    }
+
     .nav-buttons {
       display: flex;
       gap: 12px;
       justify-content: space-between;
     }
     .nav-btn {
-      padding: 10px 20px;
-      border: 1px solid #e0e0e0;
-      border-radius: 6px;
-      background: #fff;
+      padding: 12px 24px;
+      border: 1px solid var(--border-glass);
+      border-radius: var(--radius-sm);
+      background: var(--bg-glass);
       cursor: pointer;
       font-size: 14px;
-      color: #333;
-      transition: all 0.15s;
+      font-weight: 600;
+      color: var(--text-primary);
+      transition: all var(--transition-normal);
     }
-    .nav-btn:hover:not(:disabled) { background: #f5f5f5; }
-    .nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .nav-btn:hover:not(:disabled) {
+      background: var(--bg-glass-hover);
+      border-color: var(--neon-blue);
+    }
+    .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
     .nav-btn.primary {
-      background: #1976d2;
+      background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
       color: #fff;
-      border-color: #1976d2;
+      border-color: transparent;
+      box-shadow: 0 0 15px rgba(0, 212, 255, 0.2);
     }
-    .nav-btn.primary:hover:not(:disabled) { background: #1565c0; }
+    .nav-btn.primary:hover:not(:disabled) {
+      box-shadow: 0 0 30px rgba(0, 212, 255, 0.4);
+      transform: translateY(-1px);
+    }
     .not-found {
       text-align: center;
       padding: 60px 20px;
     }
-    .not-found h2 { color: #999; }
+    .not-found h2 { color: var(--text-muted); }
     @media (max-width: 768px) {
       .lesson-content { flex-direction: column; align-items: center; }
       .text-section { max-width: 100%; }
@@ -203,6 +317,9 @@ import { Lesson, LessonStep } from '../../models/lesson.model';
   `],
 })
 export class LessonComponent implements OnInit {
+  @ViewChild('celebration') celebration!: CelebrationComponent;
+  Math = Math;
+
   lesson = signal<Lesson | null>(null);
   currentStepIndex = signal(0);
   moveCorrect = signal(false);
@@ -264,7 +381,8 @@ export class LessonComponent implements OnInit {
 
     if (this.isLastStep()) {
       this.lessonService.updateLessonProgress(l.id, l.steps.length, true);
-      this.router.navigate(['/learn']);
+      this.celebration?.trigger();
+      setTimeout(() => this.router.navigate(['/learn']), 2000);
       return;
     }
 

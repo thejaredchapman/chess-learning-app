@@ -4,6 +4,7 @@ import { PIECE_LESSONS } from '../data/piece-lessons';
 import { RULES_LESSONS } from '../data/rules-lessons';
 import { OPENING_LESSONS } from '../data/opening-lessons';
 import { STRATEGY_LESSONS } from '../data/strategy-lessons';
+import { ENDGAME_LESSONS } from '../data/endgame-lessons';
 import { PUZZLES_DATA } from '../data/puzzles-data';
 
 const LESSON_PROGRESS_KEY = 'chess-app-lesson-progress';
@@ -16,6 +17,7 @@ export class LessonService {
     ...RULES_LESSONS,
     ...OPENING_LESSONS,
     ...STRATEGY_LESSONS,
+    ...ENDGAME_LESSONS,
   ];
 
   private allPuzzles: Puzzle[] = PUZZLES_DATA;
